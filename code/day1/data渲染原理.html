@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <!-- <script src="../../node_modules/vue/dist/vue.js"></script> -->
+
+    <div id="root">
+        <div>
+            <div>
+                <p>{{name}}--{{msg}}</p>
+            </div>
+        </div>
+        <p>{{name}}</p>
+        <p>{{msg}}</p>
+    </div>
+
+    <script>
+
+
+        let template = document.querySelector('#root');
+        let data = {
+            name: 'jinhsuo',
+            msg: 'is cool'
+        }
+
+        let reg = /\{\{(.+?)\}\}/g;
+
+        function compiler(template, data) {
+            let childNodes = template.childNodes;
+            for (let i = 0; i < childNodes.length; i++) {
+                let type = childNodes[i].nodeType;
+                if (type === 3) {
+                    let txt = childNodes[i].nodeValue;
+                    txt = txt.replace(reg, (_, g) => {
+                        let key = g.trim();
+                        let val = data[key];
+                        return val;
+                    })
+                    childNodes[i].nodeValue = txt;
+                }
+                else if (type === 1) {
+                    compiler(childNodes[i], data);
+                }
+
+            }
+
+        }
+
+        let new_template=template.cloneNode(true);
+        compiler(new_template, data);
+        root.parentNode.replaceChild(new_template, root);
+
+        console.log(template);
+
+        console.log(new_template);
+
+    </script>
+
+</body>
+
+</html>
