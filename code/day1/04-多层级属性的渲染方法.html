@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="root">
+        <p>{{name.firstName}}</p>
+    </div>
+
+    <script>
+
+        function MyVue(options) {
+            this._el = options.el;
+            this._data = options.data;
+            this.$el = this._template = document.querySelector(this._el);
+            this.render(this._template, this._data);
+        }
+        MyVue.prototype.render = function (template, data) {
+            let new_template = this.compiler(template, data);
+            this.update(template, new_template);
+        }
+        MyVue.prototype.getDeepVal = function (data, key) {
+            let arr = key.split('.');
+            let res = data;
+            while (arr.length > 0) {
+                res = res[arr.shift()]
+            }
+            return res || '';
+        }
+        MyVue.prototype.compiler = function (template, data) {
+            let reg = /\{\{(.+?)\}\}/g;
+            let childNodes = template.childNodes;
+            for (let i = 0; i < childNodes.length; i++) {
+                let type = childNodes[i].nodeType;
+                if (type === 3) {
+                    let txt = childNodes[i].nodeValue;
+                    txt = txt.replace(reg, (_, g) => {
+                        let key = g.trim();
+                        return this.getDeepVal(data, key);
+                    })
+                    childNodes[i].nodeValue = txt;
+                }
+                else if (type === 1) {
+                    this.compiler(childNodes[i], data);
+                }
+
+            }
+
+        }
+        MyVue.prototype.update = function (template, new_template) {
+            template.parentNode.replaceChild(new_template, template);
+        }
+
+        let app = new MyVue({
+            el: '#root',
+            data: {
+                name: {
+                    firstName: 'jin',
+                    lastName: 'shuo'
+                },
+                msg: 'is cool'
+            }
+        })
+
+    </script>
+</body>
+
+</html>
