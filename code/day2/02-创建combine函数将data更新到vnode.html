@@ -61,6 +61,30 @@
         }
 
 
+        function parseVNode(vnode) {
+            let type = vnode.type;
+            let node = null;
+            if (type === 3) {
+                node = document.createTextNode(vnode.value);
+            }
+            else if (type === 1) {
+                let tag = vnode.tag;
+                node = document.createElement(tag);
+                let data = vnode.data;
+                Object.keys(data).forEach(key => {
+                    node.setAttribute(key, data[key]);
+                });
+                let children = vnode.children;
+                if (children.length > 0) {
+                    children.forEach(child => {
+                        node.appendChild(parseVNode(child));
+                    })
+                }
+            }
+            return node;
+        }
+
+
         let reg = /\{\{(.+?)\}\}/g;
 
         let getDeepVal = function (data, key) {
@@ -104,7 +128,10 @@
 
         function MyVue(options) {
             this._data = options.data;
-            this._template = document.querySelector(options.el);
+            let el = document.querySelector(options.el);
+            this._template = el;
+            this._parent = el.parentNode;
+
             this.mount();
         }
 
@@ -125,17 +152,15 @@
             let ast = getVNode(this._template);
             return function render() {
                 let renderedTemplate = combine(ast, this._data);
-                debugger
                 return renderedTemplate;
             };
         }
 
-        MyVue.prototype.update = function () {
-
+        MyVue.prototype.update = function (vnode) {
+            let realDOM = parseVNode(vnode);
+            // debugger
+            this._parent.replaceChild(realDOM, document.querySelector('#root'));
         }
-
-
-
 
 
 
@@ -147,7 +172,8 @@
             el: '#root',
             data: {
                 name: 'jinshuo',
-                age: 26
+                age: 26,
+                gender: 'm'
             }
         });
 
