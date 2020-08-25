@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <div class="div1">
+        <div class="child1" id="div2">
+            <p>jinshuo is cool.</p>
+        </div>
+        <div class="child2">
+            <p>I love him.</p>
+        </div>
+    </div>
+
+    <script>
+        class VNode {
+            constructor(tag, data, value, type) {
+                this.tag = tag && tag.toLowerCase();
+                this.data = data;
+                this.value = value;
+                this.type = type;
+                this.children = [];
+            }
+            appendChild(vnode) {
+                this.children.push(vnode);
+            }
+        }
+
+        function getVNode(node) {
+            let nodeType = node.nodeType;
+            let vnode = null;
+            if (nodeType === 1) {
+                let nodeName = node.nodeName;
+                let attrs = node.attributes;
+                let attrObj = {};
+                for (let i = 0; i < attrs.length; i++) {
+                    attrObj[attrs[i].nodeName] = attrs[i].nodeValue;
+                }
+                vnode = new VNode(nodeName, attrObj, undefined, nodeType);
+                let childNodes = node.childNodes;
+                for (let i = 0; i < childNodes.length; i++) {
+                    vnode.appendChild(getVNode(childNodes[i]));
+                }
+            }
+            else if (nodeType === 3) {
+                vnode = new VNode(undefined, undefined, node.nodeValue, nodeType);
+            }
+            return vnode;
+        }
+
+
+        let root = document.querySelector('.div1');
+        let vroot = getVNode(root);
+        // console.log(vroot);
+
+    </script>
+
+    <script>
+
+        function parseVNode(vnode) {
+            let type = vnode.nodeType;
+            let node;
+            if (type === 3) {
+                node = document.createTextNode(node.nodeValue);
+            }
+            else if (type === 1) {
+                let tag = vnode.tag;
+                node = document.createElement(tag);
+                let data = vnode.data;
+                Object.keys(data).forEach(key => {
+                    node.setAttribute(key, data[key]);
+                });
+                let children = vnode.children;
+                if (children.length > 0) {
+                    children.forEach(child => {
+                        node.appendChild(parseVNode(child));
+                    })
+                }
+            }
+            return node;
+        }
+
+
+        let realRoot = parseVNode(vroot);
+        console.log(root);
+
+    </script>
+
+
+</body>
+
+</html>

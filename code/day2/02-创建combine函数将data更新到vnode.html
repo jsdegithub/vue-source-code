@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <div id="root">
+        <div class="c1">
+            <div title="tt1" id="id">{{ name }}</div>
+            <div title="tt2">{{ age }}</div>
+            <div title="tt3">{{ gender }}</div>
+            <ul>
+                <li>1</li>
+                <li>2</li>
+                <li>3</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+
+        class VNode {
+            constructor(tag, data, value, type) {
+                this.tag = tag && tag.toLowerCase();
+                this.data = data;
+                this.value = value;
+                this.type = type;
+                this.children = [];
+            }
+            appendChild(vnode) {
+                this.children.push(vnode);
+            }
+        }
+
+
+        function getVNode(node) {
+            let nodeType = node.nodeType;
+            let vnode = null;
+            if (nodeType === 1) {
+                let nodeName = node.nodeName;
+                let attrs = node.attributes;
+                let attrObj = {};
+                for (let i = 0; i < attrs.length; i++) {
+                    attrObj[attrs[i].nodeName] = attrs[i].nodeValue;
+                }
+                vnode = new VNode(nodeName, attrObj, undefined, nodeType);
+                let childNodes = node.childNodes;
+                for (let i = 0; i < childNodes.length; i++) {
+                    vnode.appendChild(getVNode(childNodes[i]));
+                }
+            }
+            else if (nodeType === 3) {
+                vnode = new VNode(undefined, undefined, node.nodeValue, nodeType);
+            }
+            return vnode;
+        }
+
+
+        let reg = /\{\{(.+?)\}\}/g;
+
+        let getDeepVal = function (data, key) {
+            let arr = key.split('.');
+            let res = data;
+            while (arr.length > 0) {
+                res = res[arr.shift()]
+            }
+            return res || '';
+        }
+
+
+        function combine(vnode, data) {
+            let tag = vnode.tag;
+            let _data = vnode.data;
+            let value = vnode.value;
+            let type = vnode.type;
+            let children = vnode.children;
+
+            let _vnode = null;
+
+            if (type === 3) {
+                value = value.replace(reg, (_, g) => {
+                    return getDeepVal(data, g.trim());
+                });
+                _vnode = new VNode(tag, _data, value, type);
+            }
+            else if (type === 1) {
+                _vnode = new VNode(tag, _data, value, type);
+                children.forEach(child => {
+                    _vnode.appendChild(combine(child, data));
+                })
+            }
+
+            return _vnode;
+        }
+
+    </script>
+
+    <script>
+
+        function MyVue(options) {
+            this._data = options.data;
+            this._template = document.querySelector(options.el);
+            this.mount();
+        }
+
+        MyVue.prototype.mount = function () {
+            this.render = this.createRenderFn();
+            this.mountComponent();
+        }
+
+        MyVue.prototype.mountComponent = function () {
+            let mount = _ => {
+                this.update(this.render());
+            }
+            mount.call(this);
+        }
+
+
+        MyVue.prototype.createRenderFn = function () {
+            let ast = getVNode(this._template);
+            return function render() {
+                let renderedTemplate = combine(ast, this._data);
+                debugger
+                return renderedTemplate;
+            };
+        }
+
+        MyVue.prototype.update = function () {
+
+        }
+
+
+
+
+
+
+    </script>
+
+    <script>
+
+        let app = new MyVue({
+            el: '#root',
+            data: {
+                name: 'jinshuo',
+                age: 26
+            }
+        });
+
+    </script>
+
+
+</body>
+
+</html>
