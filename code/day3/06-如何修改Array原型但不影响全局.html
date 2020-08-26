@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <script>
+
+        let ARRAY_METHOD = [
+            'push',
+            'pop',
+            'shift',
+            'unshift',
+            'reverse',
+            'sort',
+            'splice',
+        ];
+
+        let arr = [];
+        let arrPrototype = Object.create(Array.prototype);
+
+        ARRAY_METHOD.forEach(method => {
+            arrPrototype[method] = function () {
+                return Array.prototype[method].apply(this, arguments);
+            }
+        })
+
+        arr.__proto__ = arrPrototype;
+
+
+    </script>
+
+</body>
+
+</html>
