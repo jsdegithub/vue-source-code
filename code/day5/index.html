@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <div id="root">
+        <div class="c1">
+            <div title="tt1" id="id">{{ name }}</div>
+            <div title="tt2">{{ age }}</div>
+            <div title="tt3">{{ gender }}</div>
+            <ul>
+                <li>1</li>
+                <li>2</li>
+                <li>3</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+
+        class VNode {
+            constructor(tag, data, value, type) {
+                this.tag = tag && tag.toLowerCase();
+                this.data = data;
+                this.value = value;
+                this.type = type;
+                this.children = [];
+            }
+            appendChild(vnode) {
+                this.children.push(vnode);
+            }
+        }
+
+
+        function getVNode(node) {
+            let nodeType = node.nodeType;
+            let vnode = null;
+            if (nodeType === 1) {
+                let nodeName = node.nodeName;
+                let attrs = node.attributes;
+                let attrObj = {};
+                for (let i = 0; i < attrs.length; i++) {
+                    attrObj[attrs[i].nodeName] = attrs[i].nodeValue;
+                }
+                vnode = new VNode(nodeName, attrObj, undefined, nodeType);
+                let childNodes = node.childNodes;
+                for (let i = 0; i < childNodes.length; i++) {
+                    vnode.appendChild(getVNode(childNodes[i]));
+                }
+            }
+            else if (nodeType === 3) {
+                vnode = new VNode(undefined, undefined, node.nodeValue, nodeType);
+            }
+            return vnode;
+        }
+
+
+        function parseVNode(vnode) {
+            let type = vnode.type;
+            let node = null;
+            if (type === 3) {
+                node = document.createTextNode(vnode.value);
+            }
+            else if (type === 1) {
+                let tag = vnode.tag;
+                node = document.createElement(tag);
+                let data = vnode.data;
+                Object.keys(data).forEach(key => {
+                    node.setAttribute(key, data[key]);
+                });
+                let children = vnode.children;
+                if (children.length > 0) {
+                    children.forEach(child => {
+                        node.appendChild(parseVNode(child));
+                    })
+                }
+            }
+            return node;
+        }
+
+
+        let reg = /\{\{(.+?)\}\}/g;
+
+        let getDeepVal = function (data, key) {
+            let arr = key.split('.');
+            let res = data;
+            while (arr.length > 0) {
+                res = res[arr.shift()]
+            }
+            return res || '';
+        }
+
+
+        function combine(vnode, data) {
+            let tag = vnode.tag;
+            let _data = vnode.data;
+            let value = vnode.value;
+            let type = vnode.type;
+            let children = vnode.children;
+
+            let _vnode = null;
+
+            if (type === 3) {
+                value = value.replace(reg, (_, g) => {
+                    return getDeepVal(data, g.trim());
+                });
+                _vnode = new VNode(tag, _data, value, type);
+            }
+            else if (type === 1) {
+                _vnode = new VNode(tag, _data, value, type);
+                children.forEach(child => {
+                    _vnode.appendChild(combine(child, data));
+                })
+            }
+
+            return _vnode;
+        }
+
+    </script>
+
+    <script>
+
+        function MyVue(options) {
+            this._data = options.data;
+            let el = document.querySelector(options.el);
+            this._template = el;
+            this._parent = el.parentNode;
+
+            this.initData();
+            this.mount();
+        }
+
+        MyVue.prototype.mount = function () {
+            this.render = this.createRenderFn();
+            this.mountComponent();
+        }
+
+        MyVue.prototype.mountComponent = function () {
+            let mount = _ => {
+                this.update(this.render());
+            }
+            mount.call(this);
+        }
+
+
+        MyVue.prototype.createRenderFn = function () {
+            let ast = getVNode(this._template);
+            return function render() {
+                let renderedTemplate = combine(ast, this._data);
+                return renderedTemplate;
+            };
+        }
+
+        MyVue.prototype.update = function (vnode) {
+            let realDOM = parseVNode(vnode);
+            // debugger
+            this._parent.replaceChild(realDOM, document.querySelector('#root'));
+        }
+
+
+
+    </script>
+
+
+    <script>
+
+        let ARRAY_METHOD = [
+            'push',
+            'pop',
+            'shift',
+            'unshift',
+            'reverse',
+            'sort',
+            'splice',
+        ];
+
+        let arrPrototype = Object.create(Array.prototype);
+
+        ARRAY_METHOD.forEach(method => {
+            arrPrototype[method] = function () {
+                for (let i = 0; i < arguments.length; i++) {
+                    observer(arguments[i]);
+                }
+                return Array.prototype[method].apply(this, arguments);
+            }
+        })
+
+
+        function defineReactive(target, key, value, enumerable) {
+
+            let _this = this;
+
+            if (typeof value === 'object' && value != null) {
+                observer(value);
+            }
+            Object.defineProperty(target, key, {
+                configurable: true,
+                enumerable: !!enumerable,
+                get() {
+                    return value;
+                },
+                set(newVal) {
+                    if (typeof newVal === "object" && newVal !== null) {
+                        observer(newVal);
+                    }
+                    value = newVal;
+                    typeof _this.mountComponent === 'function' && _this.mountComponent();
+                }
+            })
+        }
+
+
+        function observer(obj, vm) {
+            if (Array.isArray(obj)) {
+                obj.__proto__ = arrPrototype;
+                for (let i = 0; i < obj.length; i++) {
+                    observer(obj[i], vm);
+                }
+            }
+            else {
+                let keys = Object.keys(obj);
+                for (let i = 0; i < keys.length; i++) {
+                    let key = keys[i];
+                    defineReactive.call(vm, obj, key, obj[key], true);
+                }
+            }
+        }
+
+
+
+        MyVue.prototype.initData = function () {
+            let keys = Object.keys(this._data);
+
+            observer(this._data, this);
+
+            for (let i = 0; i < keys.length; i++) {
+                proxy(this, '_data', keys[i]);
+            }
+        }
+
+
+        function proxy(target, prop, key) {
+            Object.defineProperty(target, key, {
+                configurable: true,
+                enumerable: true,
+                get() {
+                    return target[prop][key];
+                },
+                set(newVal) {
+                    target[prop][key] = newVal;
+                }
+            })
+        }
+
+
+    </script>
+
+
+    <script>
+
+        let app = new MyVue({
+            el: '#root',
+            data: {
+                name: 'jinshuo',
+                age: 26,
+                gender: 'm',
+                datas: [
+                    { info: 'hhh' },
+                    { info: '666' },
+                    { info: '999' },
+                ],
+                like: {
+                    game: false,
+                    programming: true
+                }
+            }
+        });
+
+    </script>
+
+
+</body>
+
+</html>
