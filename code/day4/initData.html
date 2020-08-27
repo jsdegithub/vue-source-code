@@ -132,7 +132,7 @@
             this._template = el;
             this._parent = el.parentNode;
 
-            reactify(this._data, this);
+            this.initData();
             this.mount();
         }
 
@@ -206,7 +206,11 @@
                     return value;
                 },
                 set(newVal) {
-                    value = reactify(newVal);
+                    if (typeof newVal === "object" && newVal !== null) {
+                        value = reactify(newVal);
+                    } else {
+                        value = newVal;
+                    }
                     _this.mountComponent();
                 }
             })
@@ -228,6 +232,33 @@
                 }
             }
         }
+
+
+
+        MyVue.prototype.initData = function () {
+            let keys = Object.keys(this._data);
+            
+            reactify(this._data, this);
+
+            for (let i = 0; i < keys.length; i++) {
+                proxy(this, '_data', keys[i]);
+            }
+        }
+
+
+        function proxy(target, prop, key) {
+            Object.defineProperty(target, key, {
+                configurable: true,
+                enumerable: true,
+                get() {
+                    return target[prop][key];
+                },
+                set(newVal) {
+                    target[prop][key] = newVal;
+                }
+            })
+        }
+
 
     </script>
 
